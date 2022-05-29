@@ -1,0 +1,19 @@
+[package]
+name = "ctj"
+description = "CSV To JSON: Parse CSV ordered format into JSON for further processing"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+csv = "1.1"
+clap = { version = "3.1.10", features = ["derive"] }
+log = "0.4"
+env_logger = "0.9"
+dotenv = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+lazy_static = "1.4"
+indicatif = "0.16"
+lib = { path = "../lib" }

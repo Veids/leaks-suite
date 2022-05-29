@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+  "leaks_bot",
+  "leaks_indexer",
+  "leaks_ctj",
+  "lib"
+]
