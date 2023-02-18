@@ -2,6 +2,7 @@ use std::{
     fs::File,
     io::{prelude::*, BufReader, BufWriter},
     path::Path,
+    time::Duration
 };
 
 use clap::Parser;
@@ -215,7 +216,7 @@ impl Indexer {
         let (input, pb): (Box<dyn Read>, ProgressBar) = match input_path {
             "-" => {
                 let pb = ProgressBar::new_spinner();
-                pb.enable_steady_tick(tick);
+                pb.enable_steady_tick(Duration::from_millis(tick));
                 (Box::new(std::io::stdin().lock()), pb)
             }
             _ => {
@@ -223,8 +224,8 @@ impl Indexer {
                 let input = File::open(input_path).unwrap();
 
                 let pb = ProgressBar::new(input_path.metadata().unwrap().len());
-                pb.enable_steady_tick(500);
-                pb.set_style(ProgressStyle::default_bar().template("{spinner:.green} {wide_bar:.green/black} {bytes:>11.green}/{total_bytes:<11.green} {bytes_per_sec:>13.red} [{elapsed_precise}] eta ({eta:.blue})")
+                pb.enable_steady_tick(Duration::from_millis(tick));
+                pb.set_style(ProgressStyle::default_bar().template("{spinner:.green} {wide_bar:.green/black} {bytes:>11.green}/{total_bytes:<11.green} {bytes_per_sec:>13.red} [{elapsed_precise}] eta ({eta:.blue})").unwrap()
             .progress_chars("━╾╴─"));
                 (Box::new(input), pb)
             }

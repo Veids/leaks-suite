@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::ops::AddAssign;
 use std::path::Path;
+use std::time::Duration;
 
 use clap::Parser;
 use csv::ByteRecord;
@@ -13,6 +14,7 @@ use lib::{CredentialData, LeakData};
 use serde::Deserialize;
 
 static MAX_JSON_SIZE: usize = 16777216;
+static MAX_JSON_ELEMENTS: usize = 500_000;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -110,8 +112,8 @@ fn fflush_object_buffer(
 fn parse(csv: &Path, out: &Path) -> Result<(), Box<dyn Error>> {
     let file = File::open(csv)?;
     let pb = ProgressBar::new(file.metadata()?.len());
-    pb.enable_steady_tick(500);
-    pb.set_style(ProgressStyle::default_bar().template("{spinner:.green} {wide_bar:40.green/black} {bytes:>11.green}/{total_bytes:<11.green} {bytes_per_sec:>13.red} [{elapsed_precise}] eta ({eta:.blue})")
+    pb.enable_steady_tick(Duration::from_millis(500));
+    pb.set_style(ProgressStyle::default_bar().template("{spinner:.green} {wide_bar:40.green/black} {bytes:>11.green}/{total_bytes:<11.green} {bytes_per_sec:>13.red} [{elapsed_precise}] eta ({eta:.blue})")?
         .progress_chars("━╾╴─"));
     let input_wrap = pb.wrap_read(file);
 
@@ -123,6 +125,7 @@ fn parse(csv: &Path, out: &Path) -> Result<(), Box<dyn Error>> {
     let mut writer = BufWriter::new(out_file);
 
     let mut credential_datas: HashMap<String, CredentialData> = HashMap::new();
+    let mut credential_datas_len: usize = 0;
 
     let mut raw_record = csv::ByteRecord::new();
     let mut last_domain = Vec::new();
@@ -133,7 +136,8 @@ fn parse(csv: &Path, out: &Path) -> Result<(), Box<dyn Error>> {
         let username = std::str::from_utf8(record.username)?.to_string();
         let password = std::str::from_utf8(record.password)?.to_string();
         let subdomain = std::str::from_utf8(record.subdomain)?;
-        if record.domain == last_domain {
+
+        if record.domain == last_domain && credential_datas_len < MAX_JSON_ELEMENTS {
             let entry = if let Some(entry) = credential_datas.get_mut(subdomain) {
                 entry
             } else {
@@ -147,10 +151,12 @@ fn parse(csv: &Path, out: &Path) -> Result<(), Box<dyn Error>> {
                 entry
             };
             entry.data.push((username, password));
+            credential_datas_len += 1;
         } else {
             let domain_s = std::str::from_utf8(&last_domain)?.to_string();
             fflush_object_buffer(domain_s, credential_datas, &mut writer, &pb);
             credential_datas = HashMap::new();
+            credential_datas_len = 0;
 
             let subdomain = subdomain.to_string();
             credential_datas.insert(
